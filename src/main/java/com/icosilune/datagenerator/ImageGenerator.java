@@ -93,7 +93,7 @@ public class ImageGenerator {
   
   Font chooseFont(List<String> tags) {
     String fontName = FONT_NAMES[rand.nextInt(FONT_NAMES.length)];
-    tags.add(fontName);
+    tags.add(fontName.replace(" ", ""));
     int fontSize = 20 + rand.nextInt(40);
     return new Font(fontName, Font.PLAIN, fontSize);
   }
