@@ -10,14 +10,14 @@ import vgg19_trainable as vgg
 
 # built from https://github.com/tensorflow/tensorflow/blob/r0.11/tensorflow/examples/tutorials/mnist/mnist.py
 
-def inference(images, label_count):
-  net = vgg.Vgg19()
+def inference(images, label_count, weights1, weights2):
+  net = vgg.Vgg19(weights1=weights1, weights2=weights2)
   net.build(images)
   
   with tf.name_scope('softmax_linear'):
     weights = tf.Variable(
-        tf.truncated_normal([4096, label_count],
-                            stddev=1.0 / math.sqrt(float(4096))),
+        tf.truncated_normal([weights2, label_count],
+                            stddev=1.0 / math.sqrt(float(weights2))),
                             name='weights')
     biases = tf.Variable(tf.zeros([label_count]), name='biases')
     logits = tf.matmul(net.fc7, weights) + biases
@@ -27,7 +27,7 @@ def inference(images, label_count):
 def loss(logits, labels):
   """Calculates the loss from the logits and the labels."""
   with tf.name_scope('loss'):
-    return tf.contrib.losses.absolute_difference(logits, labels)
+    return tf.sqrt(tf.contrib.losses.absolute_difference(logits, labels))
 
 
 def training(loss, learning_rate):

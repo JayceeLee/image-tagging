@@ -15,8 +15,10 @@ import classifier
 # Basic model parameters as external flags.
 flags = tf.app.flags
 FLAGS = flags.FLAGS
-flags.DEFINE_float('learning_rate', 0.01, 'Initial learning rate.')
-flags.DEFINE_integer('max_steps', 2000, 'Number of steps to run trainer.')
+flags.DEFINE_float('learning_rate', 0.0001, 'Initial learning rate.')
+flags.DEFINE_integer('max_steps', 10, 'Number of steps to run trainer.')
+flags.DEFINE_integer('weights1', 100, 'Number of neurons in first fully connected layer.')
+flags.DEFINE_integer('weights2', 100, 'Number of neurons in second fully connected layer.')
 flags.DEFINE_integer('batch_size', 10, 'Batch size.  '
                      'Must divide evenly into the dataset sizes.')
 flags.DEFINE_string('train_dir', '/Users/ashmore/NetBeansProjects/ImageTagging/output/', 'Directory to put the training data.')
@@ -102,7 +104,12 @@ def do_eval(sess,
 def run_training():
   """Train MNIST for a number of steps."""
   # Get the sets of images and labels for training, validation, and test
+  print('Loading data...')
   train_data, validation_data, test_data = dataset.load_data(FLAGS.train_dir)
+  print('train data: %d', len(train_data.images))
+  print('validation data: %d', len(train_data.images))
+  print('test data: %d', len(train_data.images))
+  print('Data loaded, starting training')
 
   # Tell TensorFlow that the model will be built into the default Graph.
   with tf.Graph().as_default():
@@ -111,7 +118,8 @@ def run_training():
         FLAGS.batch_size, train_data.images.shape, train_data.labels.shape)
 
     # Build a Graph that computes predictions from the inference model.
-    logits = classifier.inference(images_placeholder, label_count = len(train_data.indices_to_tags))
+    logits = classifier.inference(
+        images_placeholder, len(train_data.indices_to_tags), FLAGS.weights1, FLAGS.weights2)
 
     # Add to the Graph the Ops for loss calculation.
     loss = classifier.loss(logits, labels_placeholder)
@@ -163,7 +171,7 @@ def run_training():
       duration = time.time() - start_time
 
       # Write the summaries and print an overview fairly often.
-      if step % 100 == 0:
+      if step % 1 == 0:
         # Print status to stdout.
         print('Step %d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
         # Update the events file.

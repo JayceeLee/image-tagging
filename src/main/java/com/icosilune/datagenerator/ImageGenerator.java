@@ -19,8 +19,9 @@ import java.util.Random;
  */
 public class ImageGenerator {
   
-  private static final int MIN_IMAGE_SIZE = 200;
-  private static final int MAX_IMAGE_SIZE = 500;
+//  private static final int MIN_IMAGE_SIZE = 500;
+//  private static final int MAX_IMAGE_SIZE = 500;
+  private static final int IMAGE_SIZE = 500;
   
   private static final String[] FONT_NAMES = {
     "American Typewriter",
@@ -42,25 +43,25 @@ public class ImageGenerator {
     "E",
     "F",
     "G",
-    "H",
-    "I",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "O",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-    "Y",
-    "Z",
+//    "H",
+//    "I",
+//    "J",
+//    "K",
+//    "L",
+//    "M",
+//    "N",
+//    "O",
+//    "P",
+//    "Q",
+//    "R",
+//    "S",
+//    "T",
+//    "U",
+//    "V",
+//    "W",
+//    "X",
+//    "Y",
+//    "Z",
   };
   
   private final Random rand = new Random();
@@ -71,17 +72,19 @@ public class ImageGenerator {
   public ImageAndTags generate() {
     
     
-    int width = rand.nextInt(MAX_IMAGE_SIZE-MIN_IMAGE_SIZE) + MIN_IMAGE_SIZE;
-    int height = rand.nextInt(MAX_IMAGE_SIZE-MIN_IMAGE_SIZE) + MIN_IMAGE_SIZE;
+//    int width = rand.nextInt(MAX_IMAGE_SIZE-MIN_IMAGE_SIZE) + MIN_IMAGE_SIZE;
+//    int height = rand.nextInt(MAX_IMAGE_SIZE-MIN_IMAGE_SIZE) + MIN_IMAGE_SIZE;
+    int width = IMAGE_SIZE;
+    int height = IMAGE_SIZE;
     
-    BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+    BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
     Graphics2D g = img.createGraphics();
     g.setColor(Color.WHITE);
     g.fillRect(0, 0, width, height);
     
     List<String> tags = new ArrayList<>();
     
-    int glyphs = 3 + rand.nextInt(5);
+    int glyphs = 1 + rand.nextInt(3);
     for(int i=0;i<glyphs;i++) {
       String glyph = GLYPHS[rand.nextInt(GLYPHS.length)];
       tags.add(glyph);
@@ -94,13 +97,15 @@ public class ImageGenerator {
   Font chooseFont(List<String> tags) {
     String fontName = FONT_NAMES[rand.nextInt(FONT_NAMES.length)];
     tags.add(fontName.replace(" ", ""));
-    int fontSize = 20 + rand.nextInt(40);
+    int fontSize = 40 + rand.nextInt(40);
     return new Font(fontName, Font.PLAIN, fontSize);
   }
   
   void drawGlyph(Graphics2D g, int width, int height, Font font, String glyph) {
-    int x = 20 + rand.nextInt(width-40);
-    int y = 20 + rand.nextInt(height-40);
+    // IIRC the coord system of graphics is upper left being the origin
+    // NOTE: drawString draws with x and y being the lower left of the string.
+    int x = 40 + rand.nextInt(width-80);
+    int y = 40 + rand.nextInt(height-80);
     
     g.setColor(Color.BLACK);
     g.setFont(font);

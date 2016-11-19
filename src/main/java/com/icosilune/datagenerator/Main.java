@@ -17,7 +17,7 @@ import javax.imageio.ImageIO;
 public class Main {
   public static void main(String args[]) throws IOException {
    
-    int toGenerate = 100;
+    int toGenerate = 1000;
     String filePrefix = "output/";
     
     ImageGenerator imageGenerator = new ImageGenerator();

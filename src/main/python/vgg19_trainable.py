@@ -12,7 +12,7 @@ class Vgg19:
   A trainable version VGG19.
   """
 
-  def __init__(self, vgg19_npy_path=None, trainable=True):
+  def __init__(self, vgg19_npy_path=None, trainable=True, weights1=4096, weights2=4096):
     if vgg19_npy_path is None:
       vgg19_npy_path = './vgg19.npy'
 
@@ -20,6 +20,8 @@ class Vgg19:
 
     self.var_dict = {}
     self.trainable = trainable
+    self.weights1 = weights1
+    self.weights2 = weights2
 
   def build(self, rgb, train_mode=None):
     """
@@ -69,14 +71,14 @@ class Vgg19:
     self.conv5_4 = self.conv_layer(self.conv5_3, 512, 512, "conv5_4")
     self.pool5 = self.max_pool(self.conv5_4, 'pool5')
 
-    self.fc6 = self.fc_layer(self.pool5, 25088, 4096, "fc6")  # 25088 = ((224 / (2 ** 5)) ** 2) * 512
+    self.fc6 = self.fc_layer(self.pool5, 25088, self.weights1, "fc6_")  # 25088 = ((224 / (2 ** 5)) ** 2) * 512
     self.relu6 = tf.nn.relu(self.fc6)
     if train_mode is not None:
         self.relu6 = tf.cond(train_mode, lambda: tf.nn.dropout(self.relu6, 0.5), lambda: self.relu6)
     elif self.trainable:
         self.relu6 = tf.nn.dropout(self.relu6, 0.5)
 
-    self.fc7 = self.fc_layer(self.relu6, 4096, 4096, "fc7")
+    self.fc7 = self.fc_layer(self.relu6, self.weights1, self.weights2, "fc7_")
     self.relu7 = tf.nn.relu(self.fc7)
     if train_mode is not None:
       self.relu7 = tf.cond(train_mode, lambda: tf.nn.dropout(self.relu7, 0.5), lambda: self.relu7)
