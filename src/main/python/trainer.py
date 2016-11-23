@@ -15,13 +15,13 @@ import classifier
 # Basic model parameters as external flags.
 flags = tf.app.flags
 FLAGS = flags.FLAGS
-flags.DEFINE_float('learning_rate', 0.0001, 'Initial learning rate.')
-flags.DEFINE_integer('max_steps', 10, 'Number of steps to run trainer.')
+flags.DEFINE_float('learning_rate', 0.0005, 'Initial learning rate.')
+flags.DEFINE_integer('max_steps', 1000, 'Number of steps to run trainer.')
 flags.DEFINE_integer('weights1', 100, 'Number of neurons in first fully connected layer.')
 flags.DEFINE_integer('weights2', 100, 'Number of neurons in second fully connected layer.')
-flags.DEFINE_integer('batch_size', 10, 'Batch size.  '
+flags.DEFINE_integer('batch_size', 20, 'Batch size.  '
                      'Must divide evenly into the dataset sizes.')
-flags.DEFINE_string('train_dir', '/Users/ashmore/NetBeansProjects/ImageTagging/output/', 'Directory to put the training data.')
+flags.DEFINE_string('train_dir', '../../../output/', 'Directory to put the training data.')
 
 
 def placeholder_inputs(batch_size, images_shape, labels_shape):
@@ -105,10 +105,9 @@ def run_training():
   """Train MNIST for a number of steps."""
   # Get the sets of images and labels for training, validation, and test
   print('Loading data...')
-  train_data, validation_data, test_data = dataset.load_data(FLAGS.train_dir)
+  train_data, validation_data = dataset.load_data(FLAGS.train_dir)
   print('train data: %d' % len(train_data.images))
   print('validation data: %d' % len(validation_data.images))
-  print('test data: %d' % len(test_data.images))
   print('Data loaded, starting training')
 
   # Tell TensorFlow that the model will be built into the default Graph.
@@ -180,16 +179,16 @@ def run_training():
         summary_writer.flush()
 
       # Save a checkpoint and evaluate the model periodically.
-      if (step + 1) % 5 == 0 or (step + 1) == FLAGS.max_steps:
+      if (step + 1) % 20 == 0 or (step + 1) == FLAGS.max_steps:
         checkpoint_file = os.path.join(FLAGS.train_dir, 'checkpoint')
         saver.save(sess, checkpoint_file, global_step=step)
         # Evaluate against the training set.
-        print('Training Data Eval:')
-        do_eval(sess,
-                eval_correct,
-                images_placeholder,
-                labels_placeholder,
-                train_data)
+        #print('Training Data Eval:')
+        #do_eval(sess,
+        #        eval_correct,
+        #        images_placeholder,
+        #        labels_placeholder,
+        #        train_data)
         # Evaluate against the validation set.
         print('Validation Data Eval:')
         do_eval(sess,
@@ -197,13 +196,6 @@ def run_training():
                 images_placeholder,
                 labels_placeholder,
                 validation_data)
-        # Evaluate against the test set.
-        print('Test Data Eval:')
-        do_eval(sess,
-                eval_correct,
-                images_placeholder,
-                labels_placeholder,
-                test_data)
 
 
 def main(_):

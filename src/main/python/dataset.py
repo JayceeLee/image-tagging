@@ -38,7 +38,7 @@ def load_raw_data(path):
 
   return indices_to_tags, np.array(all_images, dtype = np.float32), np.array(tag_labels)
 
-def load_data(path = None, validation_and_test_fraction = .25, test_fraction = .25):
+def load_data(path = None, validation_fraction = .25):
   """ load data 
   Args:
     validation_fraction: fraction of data to use for validation & testing
@@ -53,13 +53,11 @@ def load_data(path = None, validation_and_test_fraction = .25, test_fraction = .
   indices_to_tags, images, labels = load_raw_data(path)
   
   count = len(images)
-  validation_and_test_count = int(count * validation_and_test_fraction)
-  train_count = count - validation_and_test_count
-  test_count = int(validation_and_test_count * test_fraction)
+  validation_count = int(count * validation_fraction)
+  train_count = count - validation_count
   
   return (DataSet(indices_to_tags, images[:train_count], labels[:train_count]),
-          DataSet(indices_to_tags, images[train_count:-test_count], labels[train_count:-test_count]),
-          DataSet(indices_to_tags, images[-test_count:], labels[-test_count:]))
+          DataSet(indices_to_tags, images[train_count:], labels[train_count:]))
 
 class DataSet(object):
   def __init__(self, indices_to_tags, images, labels):

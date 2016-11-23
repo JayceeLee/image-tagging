@@ -24,15 +24,19 @@ public class ImageGenerator {
   private static final int IMAGE_SIZE = 500;
   
   private static final String[] FONT_NAMES = {
-    "American Typewriter",
-    "Arial",
-    "Avenir",
-    "Baskerville",
-    "Chalkboard",
-    "Comic Sans MS",
-    "Damascus",
-    "Geneva",
-    "Impact",
+//    "American Typewriter",
+//    "Arial",
+//    "Avenir",
+//    "Baskerville",
+//    "Chalkboard",
+//    "Comic Sans MS",
+//    "Damascus",
+//    "Geneva",
+//    "Impact",
+      "Courier 10 Pitch",
+      "DejaVu Sans",
+      "Loma Bold",
+      "Padauk",
   };
   
   private static final String[] GLYPHS = {

@@ -17,7 +17,7 @@ import javax.imageio.ImageIO;
 public class Main {
   public static void main(String args[]) throws IOException {
    
-    int toGenerate = 1000;
+    int toGenerate = 4000;
     String filePrefix = "output/";
     
     ImageGenerator imageGenerator = new ImageGenerator();
@@ -28,7 +28,7 @@ public class Main {
         ImageAndTags result = imageGenerator.generate();
         
         System.out.println("Writing "+i);
-        String filename = String.format("out%03d.png", i);
+        String filename = String.format("out%04d.png", i);
         ImageIO.write(result.getImage(), "png", new File(filePrefix+filename));
         fileWriter.append(String.format("%s %s\n", filename, result.getTags()));
       }
