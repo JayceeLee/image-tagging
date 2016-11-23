@@ -7,6 +7,7 @@ import math
 
 import tensorflow as tf
 import vgg19_trainable as vgg
+import numpy as np
 
 # built from https://github.com/tensorflow/tensorflow/blob/r0.11/tensorflow/examples/tutorials/mnist/mnist.py
 
@@ -27,7 +28,11 @@ def inference(images, label_count, weights1, weights2):
 def loss(logits, labels):
   """Calculates the loss from the logits and the labels."""
   with tf.name_scope('loss'):
-    return tf.sqrt(tf.contrib.losses.absolute_difference(logits, labels))
+    # NOTE: We probably want to treat false negatives worse than false positives
+    # If we think something is there that isn't, it's less bad than if we think something isn't
+    # there that should be. This is because the expected tag space will be pretty big, and
+    # images will generally have a relatively small fraction of enabled tags
+    return tf.contrib.losses.absolute_difference(logits, labels)
 
 
 def training(loss, learning_rate):
@@ -55,6 +60,14 @@ def training(loss, learning_rate):
 
 
 def evaluation(logits, labels):
-  # TODO: do something better
-  # nice to have an output of inaccurate postivies vs inaccurate negatives
-  return loss(logits, labels)
+  """Return the number of correct predictions
+  Args:
+    logits: Logits tensor, float - [batch_size, tags_size]
+    labels: Labels tensor, float - [batch_size, tags_size]
+  """
+  
+  abs_difference = tf.abs(logits - labels)
+  correctness = tf.square(1 - tf.reduce_mean(abs_difference, 1))
+  
+  # Later, we should indicate false positives and false negatives
+  return tf.reduce_sum(correctness)

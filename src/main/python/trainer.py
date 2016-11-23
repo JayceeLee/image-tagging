@@ -45,7 +45,7 @@ def placeholder_inputs(batch_size, images_shape, labels_shape):
   # image and label tensors, except the first dimension is now batch_size
   # rather than the full size of the train or test data sets.
   images_placeholder = tf.placeholder(tf.float32, shape=tuple(images_shape_list))
-  labels_placeholder = tf.placeholder(tf.int32, shape=tuple(labels_shape_list))
+  labels_placeholder = tf.placeholder(tf.float32, shape=tuple(labels_shape_list))
   return images_placeholder, labels_placeholder
 
 
@@ -97,7 +97,7 @@ def do_eval(sess,
                                labels_placeholder)
     true_count += sess.run(eval_correct, feed_dict=feed_dict)
   precision = true_count / num_examples
-  print('  Num examples: %d  Num correct: %d  Precision @ 1: %0.04f' %
+  print('  Num examples: %d  Num correct: %f  Precision @ 1: %0.04f' %
         (num_examples, true_count, precision))
 
 
@@ -106,9 +106,9 @@ def run_training():
   # Get the sets of images and labels for training, validation, and test
   print('Loading data...')
   train_data, validation_data, test_data = dataset.load_data(FLAGS.train_dir)
-  print('train data: %d', len(train_data.images))
-  print('validation data: %d', len(train_data.images))
-  print('test data: %d', len(train_data.images))
+  print('train data: %d' % len(train_data.images))
+  print('validation data: %d' % len(validation_data.images))
+  print('test data: %d' % len(test_data.images))
   print('Data loaded, starting training')
 
   # Tell TensorFlow that the model will be built into the default Graph.
@@ -180,7 +180,7 @@ def run_training():
         summary_writer.flush()
 
       # Save a checkpoint and evaluate the model periodically.
-      if (step + 1) % 1000 == 0 or (step + 1) == FLAGS.max_steps:
+      if (step + 1) % 5 == 0 or (step + 1) == FLAGS.max_steps:
         checkpoint_file = os.path.join(FLAGS.train_dir, 'checkpoint')
         saver.save(sess, checkpoint_file, global_step=step)
         # Evaluate against the training set.
