@@ -8,6 +8,8 @@ package com.icosilune.datagenerator;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
 import javax.imageio.ImageIO;
 
 /**
@@ -21,16 +23,27 @@ public class Main {
     String filePrefix = "output/";
     
     ImageGenerator imageGenerator = new ImageGenerator();
+    
+    Set<String> allTags = new HashSet<>();
 
     File tagFile = new File(filePrefix+"tags.txt");
-    try (FileWriter fileWriter = new FileWriter(tagFile)) {
+    File tagMapFile = new File(filePrefix+"tag_map.txt");
+    try (FileWriter tagWriter = new FileWriter(tagFile);
+         FileWriter tagMapWriter = new FileWriter(tagMapFile)) {
       for(int i=0;i<toGenerate;i++) {
         ImageAndTags result = imageGenerator.generate();
         
         System.out.println("Writing "+i);
         String filename = String.format("out%04d.png", i);
         ImageIO.write(result.getImage(), "png", new File(filePrefix+filename));
-        fileWriter.append(String.format("%s %s\n", filename, result.getTags()));
+        tagWriter.append(String.format("%s %s\n", filename, result.getTags()));
+        
+        for(String tag: result.getTags()) {
+          if(!allTags.contains(tag)) {
+            tagMapWriter.append(String.format("%s\n", tag));
+            allTags.add(tag);
+          }
+        }
       }
     }
   }

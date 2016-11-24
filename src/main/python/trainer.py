@@ -22,6 +22,8 @@ flags.DEFINE_integer('weights2', 100, 'Number of neurons in second fully connect
 flags.DEFINE_integer('batch_size', 20, 'Batch size.  '
                      'Must divide evenly into the dataset sizes.')
 flags.DEFINE_string('train_dir', '../../../output/', 'Directory to put the training data.')
+flags.DEFINE_integer('summary_interval', 1, 'How often to print summaries')
+flags.DEFINE_integer('checkpoint_interval', 20, 'How often to save checkpoints')
 
 
 def placeholder_inputs(batch_size, images_shape, labels_shape):
@@ -105,7 +107,7 @@ def run_training():
   """Train MNIST for a number of steps."""
   # Get the sets of images and labels for training, validation, and test
   print('Loading data...')
-  train_data, validation_data = dataset.load_data(FLAGS.train_dir)
+  train_data, validation_data, number_tags = dataset.load_data(FLAGS.train_dir)
   print('train data: %d' % len(train_data.images))
   print('validation data: %d' % len(validation_data.images))
   print('Data loaded, starting training')
@@ -118,7 +120,7 @@ def run_training():
 
     # Build a Graph that computes predictions from the inference model.
     logits = classifier.inference(
-        images_placeholder, len(train_data.indices_to_tags), FLAGS.weights1, FLAGS.weights2)
+        images_placeholder, number_tags, FLAGS.weights1, FLAGS.weights2)
 
     # Add to the Graph the Ops for loss calculation.
     loss = classifier.loss(logits, labels_placeholder)
@@ -170,7 +172,7 @@ def run_training():
       duration = time.time() - start_time
 
       # Write the summaries and print an overview fairly often.
-      if step % 1 == 0:
+      if step % FLAGS.summary_interval == 0:
         # Print status to stdout.
         print('Step %d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
         # Update the events file.
@@ -179,16 +181,9 @@ def run_training():
         summary_writer.flush()
 
       # Save a checkpoint and evaluate the model periodically.
-      if (step + 1) % 20 == 0 or (step + 1) == FLAGS.max_steps:
+      if (step + 1) % FLAGS.checkpoint_interval == 0 or (step + 1) == FLAGS.max_steps:
         checkpoint_file = os.path.join(FLAGS.train_dir, 'checkpoint')
         saver.save(sess, checkpoint_file, global_step=step)
-        # Evaluate against the training set.
-        #print('Training Data Eval:')
-        #do_eval(sess,
-        #        eval_correct,
-        #        images_placeholder,
-        #        labels_placeholder,
-        #        train_data)
         # Evaluate against the validation set.
         print('Validation Data Eval:')
         do_eval(sess,

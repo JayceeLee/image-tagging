@@ -7,13 +7,27 @@ IMAGE_SIZE = 224
 def imread(path, target_size=(IMAGE_SIZE,IMAGE_SIZE)):
   return scipy.misc.imresize(scipy.misc.imread(path).astype(np.float32), target_size)
 
-def load_raw_data(path):
-  all_images = list()
-  all_tags = list()
-  
+def load_tag_data(path):
   tags_to_indices = dict()
   indices_to_tags = dict()
   tag_index = 0
+  
+  with open(path + 'tag_map.txt', 'r') as tag_map_file:
+    for tag in tag_map_file:
+      tag = tag.strip()
+      tags_to_indices[tag] = tag_index
+      indices_to_tags[tag_index] = tag
+      tag_index = tag_index+1
+
+  return indices_to_tags, tags_to_indices
+
+def load_raw_data(path):
+  # list of scaled source images
+  all_images = list()
+  # list of tags held by each image
+  all_tags = list()
+  
+  indices_to_tags, tags_to_indices = load_tag_data(path)
   
   with open(path + 'tags.txt', 'r') as tags_file:
     for line in tags_file:
@@ -23,11 +37,6 @@ def load_raw_data(path):
       tags = bits[1:]
       all_images.append(imread(path + file_name))
       all_tags.append(tags)
-      for tag in tags:
-        if tag not in tags_to_indices:
-          tags_to_indices[tag] = tag_index
-          indices_to_tags[tag_index] = tag
-          tag_index = tag_index+1
   
   tag_labels = list()
   for tags in all_tags:
@@ -36,7 +45,7 @@ def load_raw_data(path):
       row[tags_to_indices[tag]] = 1
     tag_labels.append(row)
 
-  return indices_to_tags, np.array(all_images, dtype = np.float32), np.array(tag_labels)
+  return np.array(all_images, dtype = np.float32), np.array(tag_labels), len(indices_to_tags)
 
 def load_data(path = None, validation_fraction = .25):
   """ load data 
@@ -44,26 +53,26 @@ def load_data(path = None, validation_fraction = .25):
     validation_fraction: fraction of data to use for validation & testing
     test_fraction: fraction of validation_data to use as the "test" category
   Returns:
-    train_data, validation_data, test_data
+    train_data, validation_data
   """
   
   if not path:
     path = '../../../output/'
   
-  indices_to_tags, images, labels = load_raw_data(path)
+  images, labels, number_tags = load_raw_data(path)
   
   count = len(images)
   validation_count = int(count * validation_fraction)
   train_count = count - validation_count
   
-  return (DataSet(indices_to_tags, images[:train_count], labels[:train_count]),
-          DataSet(indices_to_tags, images[train_count:], labels[train_count:]))
+  return (DataSet(images[:train_count], labels[:train_count]),
+          DataSet(images[train_count:], labels[train_count:]),
+          number_tags)
 
 class DataSet(object):
-  def __init__(self, indices_to_tags, images, labels):
+  def __init__(self, images, labels):
     self._images = images
     self._labels = labels
-    self._indices_to_tags = indices_to_tags
     self._epochs_completed = 0
     self._index_in_epoch = 0
     self._num_examples = images.shape[0]
@@ -75,10 +84,6 @@ class DataSet(object):
   @property
   def labels(self):
     return self._labels
-  
-  @property
-  def indices_to_tags(self):
-    return self._indices_to_tags
   
   @property
   def num_examples(self):
