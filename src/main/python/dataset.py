@@ -4,8 +4,10 @@ import numpy as np
 
 IMAGE_SIZE = 224
 
+
 def imread(path, target_size=(IMAGE_SIZE,IMAGE_SIZE)):
   return scipy.misc.imresize(scipy.misc.imread(path).astype(np.float32), target_size)
+
 
 def load_tag_data(path):
   tags_to_indices = dict()
@@ -20,6 +22,7 @@ def load_tag_data(path):
       tag_index = tag_index+1
 
   return indices_to_tags, tags_to_indices
+
 
 def load_raw_data(path):
   # list of scaled source images
@@ -45,7 +48,8 @@ def load_raw_data(path):
       row[tags_to_indices[tag]] = 1
     tag_labels.append(row)
 
-  return np.array(all_images, dtype = np.float32), np.array(tag_labels), len(indices_to_tags)
+  return np.array(all_images, dtype = np.float32), np.array(tag_labels), indices_to_tags
+
 
 def load_data(path = None, validation_fraction = .25):
   """ load data 
@@ -59,7 +63,7 @@ def load_data(path = None, validation_fraction = .25):
   if not path:
     path = '../../../output/'
   
-  images, labels, number_tags = load_raw_data(path)
+  images, labels, indices_to_tags = load_raw_data(path)
   
   count = len(images)
   validation_count = int(count * validation_fraction)
@@ -67,7 +71,8 @@ def load_data(path = None, validation_fraction = .25):
   
   return (DataSet(images[:train_count], labels[:train_count]),
           DataSet(images[train_count:], labels[train_count:]),
-          number_tags)
+          indices_to_tags)
+
 
 class DataSet(object):
   def __init__(self, images, labels):

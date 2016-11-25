@@ -7,9 +7,9 @@ import math
 
 import tensorflow as tf
 import vgg19_trainable as vgg
-import numpy as np
 
 # built from https://github.com/tensorflow/tensorflow/blob/r0.11/tensorflow/examples/tutorials/mnist/mnist.py
+
 
 def inference(images, label_count, weights1, weights2):
   net = vgg.Vgg19(weights1=weights1, weights2=weights2)
@@ -21,18 +21,22 @@ def inference(images, label_count, weights1, weights2):
                             stddev=1.0 / math.sqrt(float(weights2))),
                             name='weights')
     biases = tf.Variable(tf.zeros([label_count]), name='biases')
-    logits = tf.matmul(net.fc7, weights) + biases
+    logits = tf.nn.relu(tf.matmul(net.fc7, weights) + biases)
   return logits
 
 
-def loss(logits, labels):
+def loss(logits, labels, false_positive_weight=.5):
   """Calculates the loss from the logits and the labels."""
   with tf.name_scope('loss'):
     # NOTE: We probably want to treat false negatives worse than false positives
     # If we think something is there that isn't, it's less bad than if we think something isn't
     # there that should be. This is because the expected tag space will be pretty big, and
     # images will generally have a relatively small fraction of enabled tags
-    return tf.contrib.losses.absolute_difference(logits, labels)
+    
+    false_positives = tf.reduce_sum(tf.maximum(labels-logits, 0))
+    false_negatives = tf.reduce_sum(tf.maximum(logits-labels, 0))
+    
+    return false_positives * false_positive_weight + false_negatives
 
 
 def training(loss, learning_rate):
@@ -66,8 +70,11 @@ def evaluation(logits, labels):
     labels: Labels tensor, float - [batch_size, tags_size]
   """
   
-  abs_difference = tf.abs(logits - labels)
-  correctness = tf.square(1 - tf.reduce_mean(abs_difference, 1))
+  positives = labels
+  negatives = 1-labels
+
+  false_positives = tf.maximum(labels-logits, 0)
+  false_negatives = tf.maximum(logits-labels, 0)
   
   # Later, we should indicate false positives and false negatives
-  return tf.reduce_sum(correctness)
+  return positives, negatives, false_positives, false_negatives
