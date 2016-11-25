@@ -21,7 +21,7 @@ def inference(images, label_count, weights1, weights2):
                             stddev=1.0 / math.sqrt(float(weights2))),
                             name='weights')
     biases = tf.Variable(tf.zeros([label_count]), name='biases')
-    logits = tf.matmul(net.fc7, weights) + biases
+    logits = tf.nn.relu(tf.matmul(net.fc7, weights) + biases)
   return logits
 
 

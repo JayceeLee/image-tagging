@@ -7,7 +7,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('weights1', 100, 'Number of neurons in first fully connected layer.')
 flags.DEFINE_integer('weights2', 100, 'Number of neurons in second fully connected layer.')
 flags.DEFINE_string('train_dir', '../../../output/', 'Directory to put the training data.')
-flags.DEFINE_string('image_path','../../../output/out000.png', 'Image to evaluate')
+flags.DEFINE_string('image_path','../../../output/out0000.png', 'Image to evaluate')
 flags.DEFINE_string('checkpoint_data','checkpoint-4', 'Checkpoint data')
 
 import dataset
@@ -27,8 +27,12 @@ def main(_):
     
     # Create a saver for writing training checkpoints.
     saver = tf.train.Saver()
+
+    config = tf.ConfigProto(
+      device_count = {'GPU': 0}
+    )
     
-    with tf.Session() as sess:
+    with tf.Session(config=config) as sess:
       saver.restore(sess, FLAGS.train_dir + FLAGS.checkpoint_data)
       (raw_result,) = sess.run([logits], {images_placeholder: input})
       result = {tag: raw_result[0,index] for index,tag in indices_to_tags.items()}
