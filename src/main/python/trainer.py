@@ -8,6 +8,7 @@ import time
 
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
+import numpy as np
 
 import dataset
 import classifier
@@ -76,6 +77,7 @@ def fill_feed_dict(data_set, images_pl, labels_pl):
 
 
 def do_eval(sess,
+            indices_to_tags,
             eval_correct,
             images_placeholder,
             labels_placeholder,
@@ -90,24 +92,49 @@ def do_eval(sess,
       input_data.read_data_sets().
   """
   # And run one epoch of eval.
-  true_count = 0  # Counts the number of correct predictions.
   steps_per_epoch = data_set.num_examples // FLAGS.batch_size
-  num_examples = steps_per_epoch * FLAGS.batch_size
+
+  all_positives = np.zeros(len(indices_to_tags), dtype=np.float32)
+  all_negatives = np.zeros(len(indices_to_tags), dtype=np.float32)
+  all_false_positives = np.zeros(len(indices_to_tags), dtype=np.float32)
+  all_false_negatives = np.zeros(len(indices_to_tags), dtype=np.float32)
+
   for step in xrange(steps_per_epoch):
     feed_dict = fill_feed_dict(data_set,
                                images_placeholder,
                                labels_placeholder)
-    true_count += sess.run(eval_correct, feed_dict=feed_dict)
-  precision = true_count / num_examples
-  print('  Num examples: %d  Num correct: %f  Precision @ 1: %0.04f' %
-        (num_examples, true_count, precision))
+    positives, negatives, false_positives, false_negatives = sess.run(eval_correct, feed_dict=feed_dict)
+    all_positives += np.sum(positives,0)
+    all_negatives += np.sum(negatives,0)
+    all_false_positives += np.sum(false_positives,0)
+    all_false_negatives += np.sum(false_negatives,0)
+
+  all_positives /= data_set.num_examples
+  all_negatives /= data_set.num_examples
+  all_false_positives /= data_set.num_examples
+  all_false_negatives /= data_set.num_examples
+  
+  print('  Total correct positives %.2f, out of %.2f' % 
+      (1 - np.sum(all_false_positives) / np.sum(all_positives),
+      np.sum(all_positives)))
+  print('  Total correct negatives %.2f, out of %.2f' % 
+      (1 - np.sum(all_false_negatives) / np.sum(all_negatives),
+      np.sum(all_negatives)))
+  
+  for index in indices_to_tags:
+    print('  %s:\t+: %.2f/%.2f\t-: %.2f/%.2f' %
+        (indices_to_tags[index],
+        all_false_positives[index],
+        all_positives[index],
+        all_false_negatives[index],
+        all_negatives[index],))
 
 
 def run_training():
   """Train MNIST for a number of steps."""
   # Get the sets of images and labels for training, validation, and test
   print('Loading data...')
-  train_data, validation_data, number_tags = dataset.load_data(FLAGS.train_dir)
+  train_data, validation_data, indices_to_tags = dataset.load_data(FLAGS.train_dir)
   print('train data: %d' % len(train_data.images))
   print('validation data: %d' % len(validation_data.images))
   print('Data loaded, starting training')
@@ -120,7 +147,7 @@ def run_training():
 
     # Build a Graph that computes predictions from the inference model.
     logits = classifier.inference(
-        images_placeholder, number_tags, FLAGS.weights1, FLAGS.weights2)
+        images_placeholder, len(indices_to_tags), FLAGS.weights1, FLAGS.weights2)
 
     # Add to the Graph the Ops for loss calculation.
     loss = classifier.loss(logits, labels_placeholder)
@@ -174,7 +201,7 @@ def run_training():
       # Write the summaries and print an overview fairly often.
       if step % FLAGS.summary_interval == 0:
         # Print status to stdout.
-        print('Step %d: loss = %.2f (%.3f sec)' % (step, loss_value, duration))
+        print('Step %d: loss = %.3f (%.3f sec)' % (step, loss_value, duration))
         # Update the events file.
         summary_str = sess.run(summary, feed_dict=feed_dict)
         summary_writer.add_summary(summary_str, step)
@@ -187,6 +214,7 @@ def run_training():
         # Evaluate against the validation set.
         print('Validation Data Eval:')
         do_eval(sess,
+                indices_to_tags,
                 eval_correct,
                 images_placeholder,
                 labels_placeholder,
