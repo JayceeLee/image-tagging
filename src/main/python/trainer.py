@@ -25,6 +25,8 @@ flags.DEFINE_integer('batch_size', 20, 'Batch size.  '
 flags.DEFINE_string('train_dir', '../../../output/', 'Directory to put the training data.')
 flags.DEFINE_integer('summary_interval', 1, 'How often to print summaries')
 flags.DEFINE_integer('checkpoint_interval', 20, 'How often to save checkpoints')
+flags.DEFINE_float('increment_tags_threshold', 0.25, 'When loss is this low, increment tags to learn')
+flags.DEFINE_float('false_negative_weight', 10.0, 'How strongly to weight false negatives (vs false positives)')
 
 
 def placeholder_inputs(batch_size, images_shape, labels_shape):
@@ -81,7 +83,8 @@ def do_eval(sess,
             eval_correct,
             images_placeholder,
             labels_placeholder,
-            data_set):
+            data_set,
+            tags_to_evaluate):
   """Runs one evaluation against the full epoch of data.
   Args:
     sess: The session in which the model has been trained.
@@ -91,6 +94,10 @@ def do_eval(sess,
     data_set: The set of images and labels to evaluate, from
       input_data.read_data_sets().
   """
+  
+  with sess.as_default():
+    indices_to_tags = {k: v for k, v in indices_to_tags.items() if k < tags_to_evaluate.eval()}
+  
   # And run one epoch of eval.
   steps_per_epoch = data_set.num_examples // FLAGS.batch_size
 
@@ -108,25 +115,20 @@ def do_eval(sess,
     all_negatives += np.sum(negatives,0)
     all_false_positives += np.sum(false_positives,0)
     all_false_negatives += np.sum(false_negatives,0)
-
-  all_positives /= data_set.num_examples
-  all_negatives /= data_set.num_examples
-  all_false_positives /= data_set.num_examples
-  all_false_negatives /= data_set.num_examples
   
   print('  Total correct positives %.2f, out of %.2f' % 
-      (1 - np.sum(all_false_positives) / np.sum(all_positives),
+      (np.sum(all_positives) - np.sum(all_false_positives),
       np.sum(all_positives)))
   print('  Total correct negatives %.2f, out of %.2f' % 
-      (1 - np.sum(all_false_negatives) / np.sum(all_negatives),
+      (np.sum(all_negatives) - np.sum(all_false_negatives),
       np.sum(all_negatives)))
-  
+
   for index in indices_to_tags:
     print('  %s:\t+: %.2f/%.2f\t-: %.2f/%.2f' %
         (indices_to_tags[index],
-        all_false_positives[index],
+        all_positives[index] - all_false_positives[index],
         all_positives[index],
-        all_false_negatives[index],
+        all_negatives[index] - all_false_negatives[index],
         all_negatives[index],))
 
 
@@ -148,15 +150,21 @@ def run_training():
     # Build a Graph that computes predictions from the inference model.
     logits = classifier.inference(
         images_placeholder, len(indices_to_tags), FLAGS.weights1, FLAGS.weights2)
+        
+    # Represents the number of tags to attempt to learn.
+    # We will learn tags incrementally
+    tags_to_evaluate = tf.Variable(1, name="tags_to_evaluate")
+    increment_tags_to_evaluate = tf.assign(
+        tags_to_evaluate, tf.minimum(tf.add(tags_to_evaluate, tf.constant(1)), len(indices_to_tags)))
 
     # Add to the Graph the Ops for loss calculation.
-    loss = classifier.loss(logits, labels_placeholder)
+    loss = classifier.loss(logits, labels_placeholder, tags_to_evaluate, FLAGS.false_negative_weight)
 
     # Add to the Graph the Ops that calculate and apply gradients.
     train_op = classifier.training(loss, FLAGS.learning_rate)
 
     # Add the Op to compare the logits to the labels during evaluation.
-    eval_correct = classifier.evaluation(logits, labels_placeholder)
+    eval_correct = classifier.evaluation(logits, labels_placeholder, tags_to_evaluate)
 
     # Build the summary Tensor based on the TF collection of Summaries.
     summary = tf.merge_all_summaries()
@@ -218,7 +226,14 @@ def run_training():
                 eval_correct,
                 images_placeholder,
                 labels_placeholder,
-                validation_data)
+                validation_data,
+                tags_to_evaluate)
+
+      eval_tags_to_evaluate = sess.run(tags_to_evaluate)
+      if loss_value < FLAGS.increment_tags_threshold and eval_tags_to_evaluate < len(indices_to_tags):
+        print('Incrementing tags_to_evaluate')
+        sess.run(increment_tags_to_evaluate)
+        pass
 
 
 def main(_):

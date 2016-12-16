@@ -18,8 +18,13 @@ import javax.imageio.ImageIO;
  */
 public class Main {
   public static void main(String args[]) throws IOException {
+    
+    int toGenerate = 1000;
+
+    if(args.length > 0) {
+      toGenerate = Integer.parseInt(args[0]);
+    }
    
-    int toGenerate = 4000;
     String filePrefix = "output/";
     
     ImageGenerator imageGenerator = new ImageGenerator();
