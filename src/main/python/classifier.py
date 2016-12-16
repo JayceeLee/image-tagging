@@ -15,28 +15,39 @@ def inference(images, label_count, weights1, weights2):
   net = vgg.Vgg19(weights1=weights1, weights2=weights2)
   net.build(images)
   
-  with tf.name_scope('softmax_linear'):
+  with tf.name_scope('logits'):
     weights = tf.Variable(
         tf.truncated_normal([weights2, label_count],
                             stddev=1.0 / math.sqrt(float(weights2))),
                             name='weights')
     biases = tf.Variable(tf.zeros([label_count]), name='biases')
-    logits = tf.nn.relu(tf.matmul(net.fc7, weights) + biases)
+    linear = tf.matmul(net.fc7, weights) + biases
+    logits = tf.sigmoid(tf.nn.dropout(linear, 0.5))
   return logits
 
 
-def loss(logits, labels, false_positive_weight=.5):
-  """Calculates the loss from the logits and the labels."""
+def loss(logits, labels, tags_to_evaluate, false_negative_weight=2.0):
+  """Calculates the loss from the logits and the labels.
+  Args:
+    logits: Logits tensor, float - [batch_size, tags_size]
+    labels: Labels tensor, float - [batch_size, tags_size]
+  """
   with tf.name_scope('loss'):
     # NOTE: We probably want to treat false negatives worse than false positives
     # If we think something is there that isn't, it's less bad than if we think something isn't
     # there that should be. This is because the expected tag space will be pretty big, and
     # images will generally have a relatively small fraction of enabled tags
     
-    false_positives = tf.reduce_sum(tf.maximum(labels-logits, 0))
-    false_negatives = tf.reduce_sum(tf.maximum(logits-labels, 0))
-    
-    return false_positives * false_positive_weight + false_negatives
+    sliced_logits = tf.slice(logits, [0,0], [-1,tags_to_evaluate])
+    sliced_labels = tf.slice(labels, [0,0], [-1,tags_to_evaluate])
+
+#    return tf.contrib.losses.absolute_difference(sliced_logits, sliced_labels)
+
+    false_positives = tf.maximum(sliced_labels-sliced_logits, 0.0)
+    false_negatives = tf.maximum(sliced_logits-sliced_labels, 0.0)
+
+    return (tf.contrib.losses.compute_weighted_loss(false_positives)
+        + false_negative_weight * tf.contrib.losses.compute_weighted_loss(false_negatives))
 
 
 def training(loss, learning_rate):
@@ -63,18 +74,21 @@ def training(loss, learning_rate):
   return train_op
 
 
-def evaluation(logits, labels):
+def evaluation(logits, labels, tags_to_evaluate):
   """Return the number of correct predictions
   Args:
     logits: Logits tensor, float - [batch_size, tags_size]
     labels: Labels tensor, float - [batch_size, tags_size]
   """
   
-  positives = labels
-  negatives = 1-labels
+  sliced_logits = tf.slice(logits, [0,0], [-1,tags_to_evaluate])
+  sliced_labels = tf.slice(labels, [0,0], [-1,tags_to_evaluate])
+  
+  positives = sliced_labels
+  negatives = 1-sliced_labels
 
-  false_positives = tf.maximum(labels-logits, 0)
-  false_negatives = tf.maximum(logits-labels, 0)
+  false_positives = tf.maximum(sliced_labels-sliced_logits, 0)
+  false_negatives = tf.maximum(sliced_logits-sliced_labels, 0)
   
   # Later, we should indicate false positives and false negatives
   return positives, negatives, false_positives, false_negatives
