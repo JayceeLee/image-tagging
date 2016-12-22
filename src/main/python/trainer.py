@@ -49,12 +49,12 @@ def placeholder_inputs(batch_size, images_shape, labels_shape):
   # Note that the shapes of the placeholders match the shapes of the full
   # image and label tensors, except the first dimension is now batch_size
   # rather than the full size of the train or test data sets.
-  images_placeholder = tf.placeholder(tf.float32, shape=tuple(images_shape_list))
-  labels_placeholder = tf.placeholder(tf.float32, shape=tuple(labels_shape_list))
+  images_placeholder = tf.placeholder(tf.float32, shape=tuple(images_shape_list), name="images")
+  labels_placeholder = tf.placeholder(tf.float32, shape=tuple(labels_shape_list), name="labels")
   return images_placeholder, labels_placeholder
 
 
-def fill_feed_dict(data_set, images_pl, labels_pl):
+def fill_feed_dict(data_set, images_pl, labels_pl, train_mode_pl, train_mode):
   """Fills the feed_dict for training the given step.
   A feed_dict takes the form of:
   feed_dict = {
@@ -74,6 +74,7 @@ def fill_feed_dict(data_set, images_pl, labels_pl):
   feed_dict = {
       images_pl: images_feed,
       labels_pl: labels_feed,
+      train_mode_pl: train_mode,
   }
   return feed_dict
 
@@ -83,6 +84,7 @@ def do_eval(sess,
             eval_correct,
             images_placeholder,
             labels_placeholder,
+            train_mode,
             data_set,
             tags_to_evaluate):
   """Runs one evaluation against the full epoch of data.
@@ -109,7 +111,8 @@ def do_eval(sess,
   for step in xrange(steps_per_epoch):
     feed_dict = fill_feed_dict(data_set,
                                images_placeholder,
-                               labels_placeholder)
+                               labels_placeholder,
+                               train_mode, False)
     positives, negatives, false_positives, false_negatives = sess.run(eval_correct, feed_dict=feed_dict)
     all_positives += np.sum(positives,0)
     all_negatives += np.sum(negatives,0)
@@ -146,16 +149,18 @@ def run_training():
     # Generate placeholders for the images and labels.
     images_placeholder, labels_placeholder = placeholder_inputs(
         FLAGS.batch_size, train_data.images.shape, train_data.labels.shape)
+    train_mode = tf.placeholder(tf.bool, name="train_mode")
 
     # Build a Graph that computes predictions from the inference model.
     logits = classifier.inference(
-        images_placeholder, len(indices_to_tags), FLAGS.weights1, FLAGS.weights2)
+        images_placeholder, len(indices_to_tags), FLAGS.weights1, FLAGS.weights2, train_mode)
         
     # Represents the number of tags to attempt to learn.
     # We will learn tags incrementally
-    tags_to_evaluate = tf.Variable(1, name="tags_to_evaluate")
-    increment_tags_to_evaluate = tf.assign(
-        tags_to_evaluate, tf.minimum(tf.add(tags_to_evaluate, tf.constant(1)), len(indices_to_tags)))
+    tags_to_evaluate = tf.Variable(1, name="tags_to_evaluate", trainable=False)
+    with tf.name_scope("increment_tags_to_evaluate"):
+      increment_tags_to_evaluate = tf.assign(
+          tags_to_evaluate, tf.minimum(tf.add(tags_to_evaluate, tf.constant(1)), len(indices_to_tags)))
 
     # Add to the Graph the Ops for loss calculation.
     loss = classifier.loss(logits, labels_placeholder, tags_to_evaluate, FLAGS.false_negative_weight)
@@ -194,7 +199,8 @@ def run_training():
       # for this particular training step.
       feed_dict = fill_feed_dict(train_data,
                                  images_placeholder,
-                                 labels_placeholder)
+                                 labels_placeholder,
+                                 train_mode, True)
 
       # Run one step of the model.  The return values are the activations
       # from the `train_op` (which is discarded) and the `loss` Op.  To
@@ -217,6 +223,7 @@ def run_training():
 
       # Save a checkpoint and evaluate the model periodically.
       if (step + 1) % FLAGS.checkpoint_interval == 0 or (step + 1) == FLAGS.max_steps:
+        print('Saving checkpoint.')
         checkpoint_file = os.path.join(FLAGS.train_dir, 'checkpoint')
         saver.save(sess, checkpoint_file, global_step=step)
         # Evaluate against the validation set.
@@ -226,6 +233,7 @@ def run_training():
                 eval_correct,
                 images_placeholder,
                 labels_placeholder,
+                train_mode,
                 validation_data,
                 tags_to_evaluate)
 
