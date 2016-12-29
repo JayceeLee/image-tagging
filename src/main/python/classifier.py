@@ -23,7 +23,7 @@ def inference(images, label_count, weights1, weights2, train_mode):
                             stddev=1.0 / math.sqrt(float(weights2))),
                             name='weights')
     biases = tf.Variable(tf.zeros([label_count]), name='biases')
-    linear = tf.matmul(net.fc7, weights) + biases
+    linear = tf.matmul(net.relu7, weights) + biases
     logits = tf.sigmoid(linear)
     return logits
 
@@ -43,14 +43,17 @@ def loss(logits, labels, tags_to_evaluate, false_negative_weight=2.0):
     sliced_logits = tf.slice(logits, [0,0], [-1,tags_to_evaluate])
     sliced_labels = tf.slice(labels, [0,0], [-1,tags_to_evaluate])
 
-#    return tf.contrib.losses.absolute_difference(sliced_logits, sliced_labels)
-
     false_positives = tf.maximum(sliced_labels-sliced_logits, 0.0)
     false_negatives = tf.maximum(sliced_logits-sliced_labels, 0.0)
+    
+    tf.summary.tensor_summary("false_positives", false_positives)
+    tf.summary.tensor_summary("false_negatives", false_negatives)
 
     with tf.name_scope('compute_loss'):
-      return (tf.contrib.losses.compute_weighted_loss(false_positives)
+      loss = (tf.contrib.losses.compute_weighted_loss(false_positives)
           + false_negative_weight * tf.contrib.losses.compute_weighted_loss(false_negatives))
+      tf.summary.scalar(loss.op.name, loss)
+      return loss
 
 
 def training(loss, learning_rate):
@@ -66,8 +69,6 @@ def training(loss, learning_rate):
     train_op: The Op for training.
   """
   with tf.name_scope('training'):
-    # Add a scalar summary for the snapshot loss.
-    tf.scalar_summary(loss.op.name, loss)
     # Create the gradient descent optimizer with the given learning rate.
     optimizer = tf.train.GradientDescentOptimizer(learning_rate)
     # Create a variable to track the global step.
