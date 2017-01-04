@@ -16,7 +16,7 @@ flags.DEFINE_integer('batch_size', 20, 'Batch size.')
 flags.DEFINE_integer('save_interval', 1, 'Save interval.')
 
 import dataset
-import vgg19_trainable as vgg
+import vgg19 as vgg
 
 # Steps:
 # 1) load data
@@ -66,10 +66,8 @@ def run_vgg():
     images_placeholder = tf.placeholder(tf.float32, shape=tuple([FLAGS.batch_size, 224, 224, 3]), name="images")
 
     with tf.name_scope('vgg'):
-      # TODO: set trainable to false. There's something weird in the lib that prevents data from getting correctly loaded as a constant.
-#      net = vgg.Vgg19(trainable = False)
-      net = vgg.Vgg19(trainable = True)
-      net.build(images_placeholder, train_mode=tf.constant(False))
+      net = vgg.Vgg19()
+      net.build(images_placeholder)
     result = net.relu7
   
     with tf.Session() as sess:

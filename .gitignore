@@ -1,3 +1,6 @@
 /output/
 /src/main/python/__pycache__/
 /src/main/python/vgg19.npy
+/src/main/python/out.npy
+/src/main/python/tsne.png
+/src/main/python/output/
