@@ -4,12 +4,12 @@ from subprocess import call
 base_image = None
 
 channels_per_layer = {
-  'conv2_1': 128,
-  'conv2_2': 128,
-  'conv3_1': 256,
-  'conv3_2': 256,
-  'conv3_3': 256,
-  'conv3_4': 256,
+#  'conv2_1': 128,
+#  'conv2_2': 128,
+#  'conv3_1': 256,
+#  'conv3_2': 256,
+#  'conv3_3': 256,
+#  'conv3_4': 256,
   'conv4_1': 512,
   'conv4_2': 512,
   'conv4_3': 512,
@@ -41,7 +41,7 @@ def execute(layer, channel):
   call(command)
 
 
-if __name__ == "__main__":  
-  for layer, count in channels_per_layer.items():
-    for channel in range(count):
+if __name__ == "__main__":
+  for layer in sorted(channels_per_layer.keys()):
+    for channel in range(channels_per_layer[layer]):
       execute(layer, channel)
