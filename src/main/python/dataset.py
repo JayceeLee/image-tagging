@@ -6,7 +6,8 @@ IMAGE_SIZE = 224
 
 
 def imread(path, target_size=(IMAGE_SIZE,IMAGE_SIZE)):
-  return scipy.misc.imresize(scipy.misc.imread(path).astype(np.float32), target_size)
+  # TODO: crop and then resize
+  return scipy.misc.imresize(scipy.misc.imread(path, mode='RGB').astype(np.float32), target_size)
 
 
 def load_tag_data(path):

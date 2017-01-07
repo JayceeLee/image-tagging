@@ -23,7 +23,7 @@ def main(_):
   with tf.Graph().as_default():
     images_placeholder = tf.placeholder(tf.float32, shape=IMAGE_SHAPE)
     logits = classifier.inference(
-        images_placeholder, len(indices_to_tags), FLAGS.weights1, FLAGS.weights2)
+        images_placeholder, len(indices_to_tags), FLAGS.weights1, FLAGS.weights2, False)
     
     # Create a saver for writing training checkpoints.
     saver = tf.train.Saver()
