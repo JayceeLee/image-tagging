@@ -69,7 +69,7 @@ def main(_):
 
       # Save an output image at the checkpoint intervls
       if (step + 1) % FLAGS.checkpoint_interval == 0 or (step + 1) == FLAGS.max_steps:
-        save_image('%s-%s-%d-%d.png' % (FLAGS.base_name, FLAGS.layer ,FLAGS.channel, step), image[0])
+        save_image('%s-%s-%d-%04d.png' % (FLAGS.base_name, FLAGS.layer, FLAGS.channel, step), image[0])
 
 if __name__ == '__main__':
   tf.app.run()
