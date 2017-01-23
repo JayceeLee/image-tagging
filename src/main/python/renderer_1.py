@@ -20,6 +20,7 @@ flags.DEFINE_integer('summary_interval', 1, 'How often to print summaries')
 flags.DEFINE_integer('checkpoint_interval', 10, 'How often to save checkpoints')
 flags.DEFINE_string('base_name', 'image', 'Base name of the image')
 flags.DEFINE_string('base_image', '', 'Image to use as basis')
+flags.DEFINE_bool('write_summaries', False, 'Whether to write summaries')
 
 
 import vgg19 as vgg
@@ -42,14 +43,18 @@ def main(_):
       net = vgg.Vgg19()
       net.build(image_placeholder)
 
-    loss = tf.reduce_mean(getattr(net, FLAGS.layer)[:,:,:,FLAGS.channel])
+    if FLAGS.layer.startswith('conv'):
+      loss = tf.reduce_mean(getattr(net, FLAGS.layer)[:,:,:,FLAGS.channel])
+    else:
+      loss = tf.reduce_mean(getattr(net, FLAGS.layer)[:,FLAGS.channel])
     loss_grad = tf.gradients(loss, image_placeholder)[0]
     
     tf.scalar_summary(loss.op.name, loss)
     
     summary = tf.merge_all_summaries()
     sess = tf.Session()
-    summary_writer = tf.train.SummaryWriter(FLAGS.output_dir, sess.graph)
+    if FLAGS.write_summaries:
+      summary_writer = tf.train.SummaryWriter(FLAGS.output_dir, sess.graph)
 
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
@@ -61,8 +66,9 @@ def main(_):
       
       # Update the events file.
       summary_str = sess.run(summary, feed_dict={image_placeholder: image})
-      summary_writer.add_summary(summary_str, step)
-      summary_writer.flush()
+      if FLAGS.write_summaries:
+        summary_writer.add_summary(summary_str, step)
+        summary_writer.flush()
 
       duration = time.time() - start_time
       print('Step %d: loss = %.3f (%.3f sec)' % (step, loss_value, duration))
