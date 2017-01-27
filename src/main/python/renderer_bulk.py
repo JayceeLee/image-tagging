@@ -21,6 +21,7 @@ channels_per_layer = {
 #  'fc6': 4096,
 #  'fc7': 4096,
   'fc8': 1000,
+  'soft': 1000,
 }
 
 def execute(layer, channel):

@@ -44,12 +44,18 @@ def main(_):
       net.build(image_placeholder)
 
     if FLAGS.layer.startswith('conv'):
-      loss = tf.reduce_mean(getattr(net, FLAGS.layer)[:,:,:,FLAGS.channel])
+      score = tf.reduce_mean(getattr(net, FLAGS.layer)[:,:,:,FLAGS.channel])
+    elif FLAGS.layer == 'soft':
+      # log_softmax to clear the initial hump when the gradient on softmax is too shallow
+      # log_softmax will max out at 0, and softmax will max at 1, preventing the gradient from increasing
+      # Multiply by the channel value to get a good gradient
+      soft = tf.nn.log_softmax(net.fc8) + tf.nn.softmax(net.fc8) * tf.reduce_mean(net.fc8[:,FLAGS.channel])
+      score = tf.reduce_mean(soft[:,FLAGS.channel])
     else:
-      loss = tf.reduce_mean(getattr(net, FLAGS.layer)[:,FLAGS.channel])
-    loss_grad = tf.gradients(loss, image_placeholder)[0]
+      score = tf.reduce_mean(getattr(net, FLAGS.layer)[:,FLAGS.channel])
+    score_grad = tf.gradients(score, image_placeholder)[0]
     
-    tf.scalar_summary(loss.op.name, loss)
+    tf.scalar_summary(score.op.name, score)
     
     summary = tf.merge_all_summaries()
     sess = tf.Session()
@@ -58,11 +64,12 @@ def main(_):
 
     for step in xrange(FLAGS.max_steps):
       start_time = time.time()
-      
-      loss_grad_value, loss_value, summary_str = sess.run([loss_grad, loss, summary], feed_dict={image_placeholder: image})
-      
-      loss_grad_value /= loss_grad_value.std()+1e-8
-      image += loss_grad_value*FLAGS.learning_rate
+
+      score_grad_value, score_value, summary_str = sess.run([score_grad, score, summary],
+                                                            feed_dict={image_placeholder: image})
+
+      score_grad_value /= score_grad_value.std()+1e-8
+      image += score_grad_value*FLAGS.learning_rate
       
       # Update the events file.
       summary_str = sess.run(summary, feed_dict={image_placeholder: image})
@@ -71,7 +78,7 @@ def main(_):
         summary_writer.flush()
 
       duration = time.time() - start_time
-      print('Step %d: loss = %.3f (%.3f sec)' % (step, loss_value, duration))
+      print('Step %d: score = %.3f (%.3f sec)' % (step, score_value, duration))
 
       # Save an output image at the checkpoint intervls
       if (step + 1) % FLAGS.checkpoint_interval == 0 or (step + 1) == FLAGS.max_steps:
