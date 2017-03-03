@@ -4,3 +4,5 @@
 /src/main/python/out.npy
 /src/main/python/tsne.png
 /src/main/python/output/
+/target/
+**/.DS_Store

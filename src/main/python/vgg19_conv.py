@@ -2,24 +2,30 @@ import os
 import tensorflow as tf
 
 import numpy as np
-import time
 import inspect
 
 VGG_MEAN = [103.939, 116.779, 123.68]
 
 # Adapted from: https://github.com/machrisaa/tensorflow-vgg/blob/master/vgg19.py
 
-class Vgg19:
-  def __init__(self, vgg19_npy_path=None):
-    if vgg19_npy_path is None:
-      path = inspect.getfile(Vgg19)
-      path = os.path.abspath(os.path.join(path, os.pardir))
-      path = os.path.join(path, "vgg19.npy")
-      vgg19_npy_path = path
-      print(vgg19_npy_path)
+data_dict_ = None
 
-    self.data_dict = np.load(vgg19_npy_path, encoding='latin1').item()
-    print("npy file loaded")
+def load_data(vgg19_npy_path=None):
+  global data_dict_
+  if vgg19_npy_path is None:
+    path = inspect.getfile(Vgg19)
+    path = os.path.abspath(os.path.join(path, os.pardir))
+    path = os.path.join(path, "vgg19.npy")
+    vgg19_npy_path = path
+    print(vgg19_npy_path)
+
+  data_dict_ = np.load(vgg19_npy_path, encoding='latin1').item()
+  print("npy file loaded")
+
+class Vgg19:
+  def __init__(self):
+    if data_dict_ is None:
+      load_data()
 
   def build(self, rgb):
     """
@@ -27,8 +33,6 @@ class Vgg19:
     :param rgb: rgb image [batch, height, width, 3] values scaled [0, 1]
     """
 
-    start_time = time.time()
-    print("build model started")
     rgb_scaled = rgb * 255.0
 
     # Convert RGB to BGR
@@ -64,8 +68,7 @@ class Vgg19:
     self.conv5_3 = self.conv_layer(self.conv5_2, "conv5_3")
     self.conv5_4 = self.conv_layer(self.conv5_3, "conv5_4")
     self.pool5 = self.max_pool(self.conv5_4, 'pool5')
-    
-    print("build model finished: %ds" % (time.time() - start_time))
+
 
   def avg_pool(self, bottom, name):
     return tf.nn.avg_pool(bottom, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name=name)
@@ -86,7 +89,7 @@ class Vgg19:
       return relu
 
   def get_conv_filter(self, name):
-    return tf.constant(self.data_dict[name][0], name="filter")
+    return tf.constant(data_dict_[name][0], name="filter")
 
   def get_bias(self, name):
-    return tf.constant(self.data_dict[name][1], name="biases")
+    return tf.constant(data_dict_[name][1], name="biases")
