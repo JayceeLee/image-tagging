@@ -1,5 +1,4 @@
 
-#from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 import numpy as np
 import time
@@ -137,7 +136,7 @@ def main(_):
     input_images = load_input(image_dir, train_size, max_resolution)
     distorted_images = np.array([apply_distortion(image, min_scale, max_scale) for image in input_images])
     
-    print('Input image shape: %s' % (input_images,))
+    print('Input image shape: %s' % (input_images.shape,))
 
     input_placeholder = tf.placeholder(tf.float32, shape=tuple([batch_size,input_images.shape[1],input_images.shape[2],3]), name="input")
     distorted_placeholder = tf.placeholder(tf.float32, shape=tuple([batch_size,input_images.shape[1],input_images.shape[2],3]), name="distorted")
