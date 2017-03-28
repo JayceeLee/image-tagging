@@ -109,10 +109,10 @@ def apply_distortion(image, min_scale, max_scale):
   return upscaled_image
 
 
-def train_batch(scaler, input_images, distorted_images, learning_rate):
+def train_batch(scaler, input_images, distorted_images, learning_rate, global_step):
   upscaled_images = scaler.upscale(distorted_images)
   loss = tf.nn.l2_loss(input_images - upscaled_images)
-  return loss, tf.train.AdamOptimizer(learning_rate).minimize(loss)
+  return loss, tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
 
 
 def main(_):
@@ -136,7 +136,7 @@ def main(_):
     global_step = tf.Variable(0, name='global_step', trainable=False)
     learning_rate = tf.train.exponential_decay(FLAGS.learning_rate, global_step,
                                                FLAGS.decay_steps, FLAGS.decay_rate, staircase=True)
-    loss, train_op = train_batch(image_scaler, input_placeholder, distorted_placeholder, learning_rate)
+    loss, train_op = train_batch(image_scaler, input_placeholder, distorted_placeholder, learning_rate, global_step)
 
     sess = tf.Session()
     
