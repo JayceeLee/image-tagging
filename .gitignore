@@ -8,3 +8,4 @@
 **/.DS_Store
 /src/main/python/scaling/__pycache__/
 /src/main/python/scaling/output/
+/src/main/python/scaling/out.png

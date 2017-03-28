@@ -1,5 +1,4 @@
 
-#from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 import numpy as np
 import time
@@ -118,30 +117,20 @@ def main(_):
   
   filter_sizes = list(map(int, FLAGS.filter_sizes.split(',')))
   channels = list(map(int, FLAGS.channels.split(',')))
-  learning_rate = FLAGS.learning_rate
-  max_steps = FLAGS.max_steps
-  summary_interval = FLAGS.max_steps
-  checkpoint_interval = FLAGS.checkpoint_interval
   batch_size = FLAGS.batch_size
-  train_size = FLAGS.train_size
-  max_resolution = FLAGS.max_resolution
   train_dir = FLAGS.train_dir
-  image_dir = FLAGS.image_dir
-  checkpoint_data = FLAGS.checkpoint_data
-  min_scale = FLAGS.min_scale
-  max_scale = FLAGS.max_scale
   
   with tf.Graph().as_default():
   
     image_scaler = scaler.Scaler(filter_sizes, channels)
-    input_images = load_input(image_dir, train_size, max_resolution)
-    distorted_images = np.array([apply_distortion(image, min_scale, max_scale) for image in input_images])
+    input_images = load_input(FLAGS.image_dir, FLAGS.train_size, FLAGS.max_resolution)
+    distorted_images = np.array([apply_distortion(image, FLAGS.min_scale, FLAGS.max_scale) for image in input_images])
     
-    print('Input image shape: %s' % (input_images,))
+    print('Input image shape: %s' % (input_images.shape,))
 
     input_placeholder = tf.placeholder(tf.float32, shape=tuple([batch_size,input_images.shape[1],input_images.shape[2],3]), name="input")
     distorted_placeholder = tf.placeholder(tf.float32, shape=tuple([batch_size,input_images.shape[1],input_images.shape[2],3]), name="distorted")
-    loss, train_op = train_batch(image_scaler, input_placeholder, distorted_placeholder, learning_rate)
+    loss, train_op = train_batch(image_scaler, input_placeholder, distorted_placeholder, FLAGS.learning_rate)
 
     sess = tf.Session()
     
@@ -152,15 +141,15 @@ def main(_):
     summary_merged = tf.summary.merge_all()
     summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
 
-    if checkpoint_data:
-      saver.restore(sess, train_dir + checkpoint_data)
+    if FLAGS.checkpoint_data:
+      saver.restore(sess, train_dir + FLAGS.checkpoint_data)
     else:
       sess.run(tf.global_variables_initializer())
 
     partitioned_input_images = [input_images[i:i + batch_size,:,:,:] for i in range(0, input_images.shape[0], batch_size)]
     partitioned_distorted_images = [distorted_images[i:i + batch_size,:,:,:] for i in range(0, distorted_images.shape[0], batch_size)]
 
-    for step in range(max_steps):
+    for step in range(FLAGS.max_steps):
       start_time = time.time()
       image_batch = partitioned_input_images[step % len(partitioned_input_images)]
       distorted_batch = partitioned_distorted_images[step % len(partitioned_input_images)]
@@ -168,7 +157,7 @@ def main(_):
 
       _, loss_value = sess.run([train_op, loss], feed_dict=feed_dict)
 
-      if step % summary_interval == 0:
+      if step % FLAGS.summary_interval == 0:
         summary, = sess.run([summary_merged], feed_dict=feed_dict)
         summary_writer.add_summary(summary, step)
         summary_writer.flush()
@@ -176,7 +165,7 @@ def main(_):
       duration = time.time() - start_time
       print('Step %d: loss = %.3f (%.3f sec)' % (step, loss_value, duration))
       
-      if (step + 1) % checkpoint_interval == 0 or (step + 1) == max_steps:
+      if (step + 1) % FLAGS.checkpoint_interval == 0 or (step + 1) == max_steps:
           print('Saving checkpoint.')
           checkpoint_file = os.path.join(train_dir, 'checkpoint')
           saver.save(sess, checkpoint_file, global_step=step)
