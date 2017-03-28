@@ -19,6 +19,8 @@ flags.DEFINE_string('channels', '64,128', 'List: number of channels per hidden l
 
 # Training details
 flags.DEFINE_float('learning_rate', 0.001, 'Initial learning rate.')
+flags.DEFINE_integer('decay_steps', 100, 'Steps until applying the learning decay factor.')
+flags.DEFINE_float('decay_rate', .9, 'Learning rate decay amount.')
 flags.DEFINE_integer('max_steps', 1000, 'Number of steps to run trainer.')
 flags.DEFINE_integer('summary_interval', 1, 'How often to print summaries')
 flags.DEFINE_integer('checkpoint_interval', 5, 'How often to save checkpoints')
@@ -130,13 +132,18 @@ def main(_):
 
     input_placeholder = tf.placeholder(tf.float32, shape=tuple([batch_size,input_images.shape[1],input_images.shape[2],3]), name="input")
     distorted_placeholder = tf.placeholder(tf.float32, shape=tuple([batch_size,input_images.shape[1],input_images.shape[2],3]), name="distorted")
-    loss, train_op = train_batch(image_scaler, input_placeholder, distorted_placeholder, FLAGS.learning_rate)
+    
+    global_step = tf.Variable(0, name='global_step', trainable=False)
+    learning_rate = tf.train.exponential_decay(FLAGS.learning_rate, global_step,
+                                               FLAGS.decay_steps, FLAGS.decay_rate, staircase=True)
+    loss, train_op = train_batch(image_scaler, input_placeholder, distorted_placeholder, learning_rate)
 
     sess = tf.Session()
     
     saver = tf.train.Saver()
     
-    tf.summary.scalar(loss.op.name, loss)
+    tf.summary.scalar('loss', loss)
+    tf.summary.scalar('learning_rate', learning_rate)
     image_scaler.summarize_tensors()
     summary_merged = tf.summary.merge_all()
     summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
