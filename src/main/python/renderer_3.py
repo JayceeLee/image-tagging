@@ -10,7 +10,8 @@ import scipy.misc
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('layers', 'conv4_2', 'List: Layer to use')
-flags.DEFINE_string('layer_scales', '1', 'List: Scale for convolution')
+flags.DEFINE_string('channels', '123', 'List: Channel to for the layer')
+flags.DEFINE_string('scales', '1', 'List: Scale for convolution')
 flags.DEFINE_string('weights', '1', 'List: Weight of the convolution')
 
 flags.DEFINE_float('learning_rate', .1, 'Learning rate')
@@ -19,8 +20,8 @@ flags.DEFINE_integer('max_steps', 100, 'Number of steps to run trainer.')
 flags.DEFINE_integer('checkpoint_interval', 1, 'How often to save output')
 flags.DEFINE_string('base_name', 'image', 'Base name of the image')
 flags.DEFINE_string('base_image', '', 'Image to use as basis')
-flags.DEFINE_float('scale', 2, 'Scaling of base image')
-
+flags.DEFINE_integer('image_height', 512, 'Height of image if using noise')
+flags.DEFINE_integer('image_width', 512, 'Width of image if using noise')
 flags.DEFINE_bool('use_laplacian_norm', True, 'Whether to use the Laplacian norm')
 flags.DEFINE_integer('patch_size', 512, 'Size of the image patch to use')
 flags.DEFINE_integer('patch_edge_size', 16, 'interpolation edge of the patch')
@@ -34,44 +35,45 @@ def save_image(filename, data):
   scipy.misc.imsave('%s/%s' % (FLAGS.output_dir, filename), data)
 
 
-#def tffunc(*argtypes):
-#    '''Helper that transforms TF-graph generating function into a regular one.
-#    See "resize" function below.
-#     '''
-#    placeholders = list(map(tf.placeholder, argtypes))
-#    def wrap(f):
-#        out = f(*placeholders)
-#        def wrapper(*args, **kw):
-#            return out.eval(dict(zip(placeholders, args)), session=kw.get('session'))
-#        return wrapper
-#    return wrap
-
-#
-## Helper function that uses TF to resize an image
-#@tffunc(np.float32, np.int32)
-#def resize(img, size):
-#  img = tf.expand_dims(img, 0)
-#  return tf.image.resize_bilinear(img, size)[0,:,:,:]
+def tffunc(*argtypes):
+    '''Helper that transforms TF-graph generating function into a regular one.
+    See "resize" function below.
+    '''
+    placeholders = list(map(tf.placeholder, argtypes))
+    def wrap(f):
+        out = f(*placeholders)
+        def wrapper(*args, **kw):
+            return out.eval(dict(zip(placeholders, args)), session=kw.get('session'))
+        return wrapper
+    return wrap
 
 
-def vgg_at_resolution(image, patch_size, vgg_scale, weight, layer):
+# Helper function that uses TF to resize an image
+@tffunc(np.float32, np.int32)
+def resize(img, size):
+    img = tf.expand_dims(img, 0)
+    return tf.image.resize_bilinear(img, size)[0,:,:,:]
+
+
+def vgg_at_resolution(image, patch_size, vgg_scale, weight, layer, channel):
   """ 
   Args:
     image: tensor of shape [batch, patch_size, patch_size, channels]
     vgg_scale: a float that is < 1
   """
   
-  scaled_size = [int(patch_size * vgg_scale), int(patch_size * vgg_scale)]
+  original_size = [patch_size, patch_size]
+  scaled_size = [int(original_size[0] * vgg_scale), int(original_size[1] * vgg_scale)]
   scaled_image = tf.image.resize_bilinear(image, scaled_size)
   
   with tf.name_scope('vgg'):
       net = vgg.Vgg19()
       net.build(scaled_image)
 
-  score = weight * tf.reduce_mean(getattr(net, layer)[:,:,:,:])
+  score = weight * tf.reduce_mean(getattr(net, layer)[:,:,:,channel])
   score_grad = tf.gradients(score, scaled_image)[0]
 
-  scaled_grad = tf.image.resize_bilinear(score_grad, [patch_size, patch_size])
+  scaled_grad = tf.image.resize_bilinear(score_grad, original_size)
   return score, scaled_grad
 
 
@@ -109,20 +111,26 @@ def choose_patch_coords(image_width, image_height, patch_size, patch_edge_size):
 
 def main(_):
   layers = FLAGS.layers.split(',')
-  layer_scales = list(map(float, FLAGS.layer_scales.split(',')))
+  channels = list(map(int, FLAGS.channels.split(',')))
+  scales = list(map(float, FLAGS.scales.split(',')))
   weights = list(map(float, FLAGS.weights.split(',')))
   patch_size = FLAGS.patch_size
   patch_edge_size = FLAGS.patch_edge_size
   
-  assert(len(layers) == len(layer_scales))
+  assert(len(layers) == len(channels))
+  assert(len(layers) == len(scales))
   assert(len(layers) == len(weights))
   
   with tf.Graph().as_default():
     if FLAGS.base_image:
       base_image = scipy.misc.imread(path, mode='RGB').astype(np.float32)
-      image_width = int(FLAGS.scale * base_image.shape[0])
-      image_height = int(FLAGS.scale * base_image.shape[1])
+      image_width = base_image.shape[0]
+      image_height = base_image.shape[1]
       image = np.array([base_image], dtype = np.float32)
+    else:
+      image_width = FLAGS.image_width
+      image_height = FLAGS.image_height
+      image = np.random.uniform(size=(1, image_width, image_height,3)).astype(np.float32) + 100.0
 
     patch_position = tf.placeholder(tf.int32, shape=(2))
     patch_x = patch_position[0]
@@ -135,7 +143,7 @@ def main(_):
     score_grad = tf.zeros_like(image_patch)
     for i in range(0, len(layers)):
       layer_score, layer_score_grad = vgg_at_resolution(
-          image_patch, patch_size, layer_scales[i], weights[i], layers[i])
+          image_patch, patch_size, scales[i], weights[i], layers[i], channels[i])
       score = score + layer_score
       score_grad = score_grad + layer_score_grad
       
