@@ -163,7 +163,7 @@ def main(_):
         summary_writer.flush()
 
       duration = time.time() - start_time
-      print('Step %d: loss = %.3f (%.3f sec)' % (step, loss_value, duration))
+      print('Step %d: loss = %.4g (%.3f sec)' % (step, loss_value, duration))
       
       if (step + 1) % FLAGS.checkpoint_interval == 0 or (step + 1) == FLAGS.max_steps:
           print('Saving checkpoint.')
