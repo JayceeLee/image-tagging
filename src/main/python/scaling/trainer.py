@@ -18,7 +18,7 @@ flags.DEFINE_string('channels', '32,64', 'List: number of channels per hidden la
                                          'Array size must be one less than filter_sizes')
 
 # Training details
-flags.DEFINE_float('learning_rate', 0.0005, 'Initial learning rate.')
+flags.DEFINE_float('learning_rate', 0.001, 'Initial learning rate.')
 flags.DEFINE_integer('max_steps', 1000, 'Number of steps to run trainer.')
 flags.DEFINE_integer('summary_interval', 1, 'How often to print summaries')
 flags.DEFINE_integer('checkpoint_interval', 5, 'How often to save checkpoints')
@@ -165,7 +165,7 @@ def main(_):
       duration = time.time() - start_time
       print('Step %d: loss = %.3f (%.3f sec)' % (step, loss_value, duration))
       
-      if (step + 1) % FLAGS.checkpoint_interval == 0 or (step + 1) == max_steps:
+      if (step + 1) % FLAGS.checkpoint_interval == 0 or (step + 1) == FLAGS.max_steps:
           print('Saving checkpoint.')
           checkpoint_file = os.path.join(train_dir, 'checkpoint')
           saver.save(sess, checkpoint_file, global_step=step)
