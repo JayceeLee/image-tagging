@@ -4,11 +4,12 @@ import tensorflow as tf
 
 class Scaler:
   
-  def __init__(self, filter_sizes, channels):
+  def __init__(self, filter_sizes, channels, train_mode=False):
     """
     Params:
       filter_sizes: list of type int with size that is the # of layers
       channels: list of type int with the # of channels per hidden layer (1 layer less than filter_sizes)
+      train_mode: whether we are training the network. If true, use nn dropout
     """
     
     channels.append(3)
@@ -16,6 +17,7 @@ class Scaler:
     
     self.filters = list()
     self.biases = list()
+    self.train_mode = train_mode
     
     for layer_index in range(len(filter_sizes)):
       with tf.variable_scope("var_layer_"+str(layer_index)):
@@ -41,6 +43,8 @@ class Scaler:
       conv = tf.nn.conv2d(input_layer, self.filters[layer_index], [1, 1, 1, 1], padding='SAME')
       bias = tf.nn.bias_add(conv, self.biases[layer_index])
       relu = tf.nn.relu(bias)
+      if (self.train_mode):
+        relu = tf.nn.dropout(relu, 0.5)
       return relu
 
   def upscale(self, input_image):

@@ -14,7 +14,7 @@ FLAGS = flags.FLAGS
 
 # Hyperparameters for the network
 flags.DEFINE_string('filter_sizes', '7,5,5', 'List: filter sizes')
-flags.DEFINE_string('channels', '32,64', 'List: number of channels per hidden layers. '
+flags.DEFINE_string('channels', '64,128', 'List: number of channels per hidden layers. '
                                          'Array size must be one less than filter_sizes')
 
 # Training details
@@ -32,8 +32,8 @@ flags.DEFINE_string('image_dir', '/Users/ashmore/Downloads/101_ObjectCategories/
 flags.DEFINE_string('checkpoint_data','', 'Checkpoint data')
 
 # Model properties
-flags.DEFINE_float('min_scale', 1.5, 'Minimum amount of upscaling to train')
-flags.DEFINE_float('max_scale', 4.0, 'Maximum amount of upscaling to train')
+flags.DEFINE_float('min_scale', 2.0, 'Minimum amount of upscaling to train')
+flags.DEFINE_float('max_scale', 3.0, 'Maximum amount of upscaling to train')
 
 
 def is_image(filename):
@@ -122,7 +122,7 @@ def main(_):
   
   with tf.Graph().as_default():
   
-    image_scaler = scaler.Scaler(filter_sizes, channels)
+    image_scaler = scaler.Scaler(filter_sizes, channels, True)
     input_images = load_input(FLAGS.image_dir, FLAGS.train_size, FLAGS.max_resolution)
     distorted_images = np.array([apply_distortion(image, FLAGS.min_scale, FLAGS.max_scale) for image in input_images])
     
